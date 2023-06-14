@@ -8,10 +8,23 @@ Base = declarative_base()
 
 
 class User(Base):
+    """
+    Класс, представляющий SQLAlchemy-модель пользователя из базы данных.
+
+    :param tg_id: Telegram ID пользователя.
+    :type tg_id: int (колонка по SQLAlchemy)
+    :param geo: Координаты пользователя.
+    :type geo: list[float] (колонка по SQLAlchemy)
+    :param notify_time: Время уведомлений пользователя.
+    :type notify_time: list[datetime.time] (колонка по SQLAlchemy)
+    :param state: Словарь состояний пользователя.
+    :type state: dict (колонка по SQLAlchemy)
+    """
+
     __tablename__ = "users"
     tg_id = Column(Integer, primary_key=True)
     geo = Column(ARRAY(Float))
-    notify_time = Column(Time)
+    notify_time = Column(ARRAY(Time))
     state = Column(JSON)
 
 
@@ -25,12 +38,14 @@ class Database:
         """
         self.engine = create_engine(url)
         self.session = Session(bind=self.engine)
+        
+    # GETTERS
 
     async def get_user(self, tg_id: int) -> User | None:
         """
         Извлекает объект пользователя из базы данных на основе заданного ID в Telegram.
 
-        :param tg_id: целое число, представляющее ID пользователя в Telegram для извлечения.
+        :param tg_id: Telegram ID пользователя.
         :type tg_id: int
 
         :return: объект пользователя или None, если пользователь не существует.
@@ -45,12 +60,14 @@ class Database:
         :return: Список объектов типа User.
         """
         return self.session.query(User).all()
+    
+    # SETTERS
 
     async def create_user(self, tg_id: int, geo: list[float] = None, notify_time: str = None, state: dict = None):
         """
         Создаёт нового пользователя в базе данных.
 
-        :param tg_id: Целое число, представляющее Telegram ID пользователя.
+        :param tg_id: Telegram ID пользователя.
         :type tg_id: int
         :param geo: Список из двух чисел, представляющий географические координаты пользователя (необязательно).
         :type geo: list[float]
@@ -89,13 +106,13 @@ class Database:
 
         :param tg_id: Telegram ID пользователя.
         :type tg_id: int
-        :param notify_time: Время, когда должно быть отправлено уведомление в формате '%H:%M'.
+        :param notify_time: Время, когда должно быть отправлено уведомление, в формате 'HH:MM'.
         :type notify_time: str
 
         :raises KeyError: Если пользователя с заданным Telegram ID не существует.
         """
         if user := await self.get_user(tg_id):
-            user.notify = datetime.strptime(notify_time, "%H:%M").time()
+            user.notify_time.append(datetime.strptime(notify_time, "%H:%M").time())
             self.session.add(user)
             return self.session.commit()
         raise KeyError
@@ -117,7 +134,7 @@ class Database:
             return self.session.commit()
         raise KeyError
 
-    """Deleters"""
+    # DELETERS
 
     async def delete_geo(self, tg_id: int):
         """
@@ -134,17 +151,20 @@ class Database:
             return self.session.commit()
         raise KeyError
 
-    async def delete_notify(self, tg_id: int):
+    async def delete_notify(self, tg_id: int, notify_time: str):
         """
         Удаляет время уведомления для заданного пользователя Telegram.
 
         :param tg_id: Telegram ID пользователя.
         :type tg_id: int
+        :param notify_time: Время отправки уведомления в формате 'HH:MM'.
+        :type notify_time: str
 
         :raises KeyError: Если пользователя с заданным Telegram ID не существует.
+        :raises ValueError: Если предоставленное время уведомления не существует в списке.
         """
         if user := await self.get_user(tg_id):
-            user.notify = None
+            user.notify_time.remove(datetime.strptime(notify_time, "%H:%M").time())
             self.session.add(user)
             return self.session.commit()
         raise KeyError
