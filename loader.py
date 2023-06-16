@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import dotenv_values, set_key
+from pymorphy2 import MorphAnalyzer
 
 from database import Database
 
@@ -14,6 +15,7 @@ set_ = lambda key, value: set_key(".env", key, value.encode("utf-8").decode("win
 bot = Bot(get("BOT_TOKEN"), parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+morph = MorphAnalyzer()
 
 db = Database(get("DATABASE_URL"))
 scheduler = AsyncIOScheduler()
