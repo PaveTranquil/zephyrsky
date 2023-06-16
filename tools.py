@@ -38,7 +38,11 @@ async def set_state(ctx: FSMContext, state: State):
 
 async def delete_state(ctx: FSMContext):
     await ctx.clear()
-    await db.delete_state(ctx.key.chat_id, 'aiogram_state')
+    for key in ['aiogram_state', 'main_msg_id', 'from']:
+        try:
+            await db.delete_state(ctx.key.chat_id, key)
+        except (ValueError, KeyError):
+            pass
 
 
 async def restore_states():
@@ -59,6 +63,67 @@ async def notify_admins(text: str):
     for admin in ADMINS:
         with suppress(TelegramBadRequest):
             await bot.send_message(admin, text)
+
+
+def degress_to_side(deg: float) -> str:
+    if 338 <= deg <= 360 or 0 <= deg <= 22:
+        return 'северный'
+    elif 22 <= deg <= 67:
+        return 'северо-восточный'
+    elif 67 <= deg <= 112:
+        return 'восточный'
+    elif 112 <= deg <= 157:
+        return 'юго-восточный'
+    elif 157 <= deg <= 202:
+        return 'южный'
+    elif 202 <= deg <= 247:
+        return 'юго-западный'
+    elif 247 <= deg <= 292:
+        return 'западный'
+    elif 292 <= deg <= 337:
+        return 'северо-западный'
+
+
+def convert_to_icon(id_: int) -> str:
+    match id_ // 100:
+        case 2:
+            return '⛈️'
+        case 3:
+            return '🌦️'
+        case 5:
+            return '🌧️'
+        case 6:
+            return '🌨️'
+        case 7:
+            match id_ % 100 // 10:
+                case 3 | 5 | 6:
+                    return '💨'
+                case _:
+                    return '🌫️'
+    match id_ % 10:
+        case 0:
+            return '☀️'
+        case 1:
+            return '🌤️'
+        case 2:
+            return '⛅'
+        case 3 | 4:
+            return '🌥️'
+
+
+async def get_weather(geo: list[float]) -> list:
+    async with ClientSession() as session:
+        params = {'lon': geo[0], 'lat': geo[1], 'units': 'metric', 'lang': 'ru', 'appid': get('APIKEY_WEATHER')}
+        async with session.get('https://api.openweathermap.org/data/2.5/weather', params=params) as resp:
+            r_dict = await resp.json()
+            if resp.status == 200:
+                if r_dict['cod'] == 200:
+                    return [r_dict['weather'][0]['id'], r_dict['weather'][0]['description'], r_dict['main']['temp'],
+                            r_dict['main']['feels_like'], round(r_dict['main']['pressure'] * 0.750064, 2),
+                            r_dict['main']['humidity'], degress_to_side(r_dict['wind']['deg']), r_dict['wind']['speed'],
+                            r_dict['clouds']['all']]
+                raise ValueError
+            raise ConnectionError
 
 
 async def reverse_geocoding(geo: list[float]) -> str:
@@ -193,10 +258,10 @@ async def get_greeting(uid: int) -> str:
         greet = choice(['Доброе утро', 'Доброго утра', 'Доброе утречко', 'Доброго утречка', 'Утречко', 'Утро доброе',
                        'Добрейшее утро', 'Добрейшего утра', 'Добрейшее утречко', 'Добрейшего утречка'])
     elif 12 <= local_time.hour <= 16:
-        greet = choice(['Добрый день', 'Доброго дня', 'Добрый денёк', 'Доброго денька', 'День добрый'
+        greet = choice(['Добрый день', 'Доброго дня', 'Добрый денёк', 'Доброго денька', 'День добрый',
                        'Добрейший день', 'Добрейшего дня', 'Добрейший денёк', 'Добрейшего денька'])
     elif 17 <= local_time.hour <= 22:
-        greet = choice(['Добрый вечер', 'Доброго вечера', 'Добрый вечерок', 'Доброго вечерка', 'Вечер добрый'
+        greet = choice(['Добрый вечер', 'Доброго вечера', 'Добрый вечерок', 'Доброго вечерка', 'Вечер добрый',
                        'Добрейший вечер', 'Добрейшего вечера', 'Добрейший вечерок', 'Добрейшего вечерка'])
     else:
         greet = choice(['Доброй ночи', 'Спокойная ночь', 'Привет глубокой ночью', 'Спокойной ночи'])
