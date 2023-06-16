@@ -51,7 +51,7 @@ class Database:
         :return: объект пользователя или None, если пользователь не существует.
         :rtype: Union[User, None]
         """
-        return self.session.query(User).filter(User.tg_id == tg_id).one()
+        return self.session.query(User).filter(User.tg_id == tg_id).first()
 
     async def get_state(self, tg_id: int, key: str):
         """
