@@ -4,7 +4,7 @@ from pytz import timezone
 
 from handlers import start, weather
 from loader import bot, dp, scheduler
-from tools import notify_admins, restore_states, send_notifies
+from tools.bot import notify_admins, restore_states, send_notifies
 
 
 async def main():

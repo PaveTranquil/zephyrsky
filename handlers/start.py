@@ -8,10 +8,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder as Board
 
-from entities import (DATA_DELETED, FORECAST, LOCATION, LOCATION_ERROR, LOCATION_SET, NO_LOCATION_FORECAST, SETTINGS, SOON, START, CallbackData, Dialog,
-                      back_btn, location_board, settings_board, start_board)
+from entities import (DATA_DELETED, FORECAST, LOCATION, LOCATION_ERROR, LOCATION_SET, NO_LOCATION_FORECAST, SETTINGS,
+                      SOON, START, CallbackData, Dialog, back_btn, location_board, settings_board, start_board)
 from loader import bot, db
-from tools import convert_to_icon, delete_state, geocoding, get_greeting, get_tzshift, get_weather, inflect_city, reverse_geocoding, set_state
+from tools.api import geocoding, get_tzshift, get_weather, reverse_geocoding
+from tools.bot import delete_state, get_greeting, set_state
+from tools.converters import inflect_city, weather_id_to_icon
 
 router = Router(name='start -> router')
 
@@ -93,7 +95,7 @@ async def get_location_as_object(msg: Message, state: FSMContext):
                          reply_markup=settings_board)
     elif await db.get_state(msg.chat.id, 'from') == 'forecast':
         weather = await get_weather(geo)
-        weather[0] = convert_to_icon(weather[0])
+        weather[0] = weather_id_to_icon(weather[0])
         weather[6] = weather[6].capitalize()
         text = FORECAST.format(inflect_city(city, {'loct'}), *weather)
         await msg.answer(LOCATION_SET.format(inflect_city(city, {'gent'})) + '\n\n' + text,
@@ -123,7 +125,7 @@ async def get_location_as_text(msg: Message, state: FSMContext):
                          reply_markup=settings_board)
     elif await db.get_state(msg.chat.id, 'from') == 'forecast':
         weather = await get_weather(geo)
-        weather[0] = convert_to_icon(weather[0])
+        weather[0] = weather_id_to_icon(weather[0])
         weather[6] = weather[6].capitalize()
         text = FORECAST.format(inflect_city(city, {'loct'}), *weather)
         await msg.answer(LOCATION_SET.format(inflect_city(city, {'gent'})) + '\n\n' + text,

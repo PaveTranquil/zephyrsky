@@ -9,7 +9,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder as Board
 from entities import FORECAST, CallbackData, back_btn
 from handlers.start import send_location
 from loader import db
-from tools import convert_to_icon, get_weather, inflect_city
+from tools.api import get_weather
+from tools.converters import inflect_city, weather_id_to_icon
 
 router = Router(name='weather -> router')
 
@@ -24,7 +25,7 @@ async def forecast(call: CallbackQuery, state: FSMContext):
 
     user = await db.get_user(call.message.chat.id)
     weather = await get_weather(user.geo)
-    weather[0] = convert_to_icon(weather[0])
+    weather[0] = weather_id_to_icon(weather[0])
     weather[6] = weather[6].capitalize()
     text = FORECAST.format(inflect_city(user.state['city'], {'loct'}), *weather)
 
