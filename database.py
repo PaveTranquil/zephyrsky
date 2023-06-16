@@ -37,7 +37,7 @@ class Database:
         :type url: str
         """
         self.engine = create_engine(url)
-        self.session = Session(bind=self.engine)
+        self.session = Session(self.engine)
 
     # GETTERS
 
@@ -51,7 +51,19 @@ class Database:
         :return: объект пользователя или None, если пользователь не существует.
         :rtype: Union[User, None]
         """
-        return self.session.query(User).filter(User.tg_id == tg_id).first()
+        return self.session.query(User).filter(User.tg_id == tg_id).one()
+
+    async def get_state(self, tg_id: int, key: str):
+        """
+        Получает значение состояния в словаре состояний заданного пользователя Telegram
+
+        :param tg_id: Идентификатор Telegram-пользователя.
+        :type tg_id: int
+        :param key: Ключ, значение которого необходимо получить из словаря состояний.
+        :type key: str
+        :return: Значение указанного ключа состояния пользователя.
+        """
+        return (await self.get_user(tg_id)).state[key]
 
     async def get_users(self) -> list[User]:
         """
@@ -94,9 +106,9 @@ class Database:
 
         :raises KeyError: Если пользователя с заданным Telegram ID не существует.
         """
-        if user := await self.get_user(tg_id):
-            user.geo = geo
-            self.session.add(user)
+
+        if await self.get_user(tg_id):
+            self.session.query(User).filter(User.tg_id == tg_id).update({User.geo: geo}, 'fetch')
             return self.session.commit()
         raise KeyError
 
@@ -113,7 +125,7 @@ class Database:
         """
         if user := await self.get_user(tg_id):
             user.notify_time.append(datetime.strptime(notify_time, "%H:%M").time())
-            self.session.add(user)
+            self.session.query(User).filter(User.tg_id == tg_id).update({User.notify_time: user.notify_time}, 'fetch')
             return self.session.commit()
         raise KeyError
 
@@ -130,7 +142,7 @@ class Database:
         """
         if user := await self.get_user(tg_id):
             user.state[key] = value
-            self.session.add(user)
+            self.session.query(User).filter(User.tg_id == tg_id).update({User.state: user.state}, 'fetch')
             return self.session.commit()
         raise KeyError
 
@@ -145,9 +157,8 @@ class Database:
 
         :raises KeyError: Если пользователя с заданным Telegram ID не существует.
         """
-        if user := await self.get_user(tg_id):
-            user.geo = None
-            self.session.add(user)
+        if await self.get_user(tg_id):
+            self.session.query(User).filter(User.tg_id == tg_id).update({User.geo: []}, 'fetch')
             return self.session.commit()
         raise KeyError
 
@@ -165,7 +176,7 @@ class Database:
         """
         if user := await self.get_user(tg_id):
             user.notify_time.remove(datetime.strptime(notify_time, "%H:%M").time())
-            self.session.add(user)
+            self.session.query(User).filter(User.tg_id == tg_id).update({User.notify_time: user.notify_time}, 'fetch')
             return self.session.commit()
         raise KeyError
 
@@ -183,7 +194,7 @@ class Database:
         if user := await self.get_user(tg_id):
             if user.state[key]:
                 user.state.pop(key)
-                self.session.add(user)
+                self.session.query(User).filter(User.tg_id == tg_id).update({User.state: user.state}, 'fetch')
                 return self.session.commit()
             raise ValueError
         raise KeyError

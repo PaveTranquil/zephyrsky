@@ -5,11 +5,14 @@ from typing import Iterable
 
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import BaseFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State
+from aiogram.fsm.storage.base import StorageKey
 from aiogram.types import CallbackQuery, Message
 from aiohttp import ClientSession
 from pymorphy2.shapes import restore_capitalization
 
-from loader import ADMINS, bot, db, get, morph
+from loader import ADMINS, bot, db, get, morph, storage
 
 
 class AdminFilter(BaseFilter):
@@ -28,11 +31,28 @@ class AdminFilter(BaseFilter):
         return await (resp.chat.id if isinstance(resp, Message) else resp.message.chat.id) in ADMINS
 
 
+async def set_state(ctx: FSMContext, state: State):
+    await ctx.set_state(state)
+    await db.set_state(ctx.key.chat_id, 'aiogram_state', str(state).split("'")[1])
+
+
+async def delete_state(ctx: FSMContext):
+    await ctx.clear()
+    await db.delete_state(ctx.key.chat_id, 'aiogram_state')
+
+
+async def restore_states():
+    users = await db.get_users()
+    for user in users:
+        if state := user.state.get('aiogram_state'):
+            await storage.set_state(bot, StorageKey(bot.id, user.tg_id, user.tg_id), state)
+
+
 async def notify_admins(text: str):
     """
-    Асинхронно отправляет сообщение с текстом `text` всем администраторам, указанным в константе `ADMINS`. 
+    Асинхронно отправляет сообщение с текстом `text` всем администраторам, указанным в константе `ADMINS`.
     Если во время отправки происходит `TelegramBadRequest`, то ошибка подавляется и функция продолжает свою работу.
-    
+
     :param text: Текст сообщения для отправки
     :type text: str
     """
@@ -66,6 +86,36 @@ async def reverse_geocoding(geo: list[float]) -> str:
             if resp.status == 200:
                 if resp_dict['response']['GeoObjectCollection']['featureMember']:
                     return resp_dict['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['name']
+                raise ValueError
+            raise ConnectionError
+
+
+async def geocoding(city: str) -> tuple[tuple[float], str]:
+    """
+    Геокодирует город в долготу и широту своего местоположения.
+    Используется API Геокодера Яндекса.
+
+    :param city: Строка, представляющая название города.
+    :type city: str
+
+    :return: Кортеж из двух чисел с плавающей точкой и корректное названием города, найденные из геокода.
+    :rtype: tuple[tuple[float], str]
+
+    :raises ValueError: Если геокод недействителен или в ответе не найдены координаты.
+    :raises ConnectionError: Если возникает проблема с подключением к API Геокодера Яндекса.
+    """
+
+    async with ClientSession() as session:
+        params = {'geocode': city, 'apikey': get('APIKEY_GEOCODE'), 'format': 'json'}
+        async with session.get('https://geocode-maps.yandex.ru/1.x', params=params) as resp:
+            resp_dict = await resp.json()
+            if resp.status == 200:
+                if resp_dict['response']['GeoObjectCollection']['featureMember']:
+                    geo = resp_dict['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['Point']['pos']
+                    return (
+                        tuple(map(float, geo.split())),
+                        resp_dict['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']['name']
+                    )
                 raise ValueError
             raise ConnectionError
 
