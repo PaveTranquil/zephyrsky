@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from sqlalchemy import ARRAY, JSON, Column, Float, Integer, Time, create_engine
-from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session
 
 Base = declarative_base()
 
@@ -23,9 +23,9 @@ class User(Base):
 
     __tablename__ = "users"
     tg_id = Column(Integer, primary_key=True)
-    geo = Column(ARRAY(Float))
-    notify_time = Column(ARRAY(Time))
-    state = Column(JSON)
+    geo = Column(ARRAY(Float), default=[])
+    notify_time = Column(ARRAY(Time), default=[])
+    state = Column(JSON, default={})
 
 
 class Database:
@@ -38,7 +38,7 @@ class Database:
         """
         self.engine = create_engine(url)
         self.session = Session(bind=self.engine)
-        
+
     # GETTERS
 
     async def get_user(self, tg_id: int) -> User | None:
@@ -60,10 +60,10 @@ class Database:
         :return: Список объектов типа User.
         """
         return self.session.query(User).all()
-    
+
     # SETTERS
 
-    async def create_user(self, tg_id: int, geo: list[float] = None, notify_time: str = None, state: dict = None):
+    async def create_user(self, tg_id: int, geo: list[float] = None, notify_time: list[str] = None, state: dict = None):
         """
         Создаёт нового пользователя в базе данных.
 
@@ -89,7 +89,7 @@ class Database:
 
         :param tg_id: Telegram ID пользователя.
         :type tg_id: int
-        :param geo: Список из двух чисел с плавающей точкой, представляющий географические координаты.
+        :param geo: Список из двух чисел с плавающей точкой, представляющий географические координаты (lon, lat).
         :type geo: list[float]
 
         :raises KeyError: Если пользователя с заданным Telegram ID не существует.
@@ -129,7 +129,7 @@ class Database:
         :raises KeyError: Если пользователя с заданным Telegram ID не существует.
         """
         if user := await self.get_user(tg_id):
-            user.state.data[key] = value
+            user.state[key] = value
             self.session.add(user)
             return self.session.commit()
         raise KeyError
@@ -181,8 +181,8 @@ class Database:
         :raises ValueError: Если предоставленный ключ не существует в словаре состояний пользователя.
         """
         if user := await self.get_user(tg_id):
-            if user.state.data[key]:
-                user.state.data.pop(key)
+            if user.state[key]:
+                user.state.pop(key)
                 self.session.add(user)
                 return self.session.commit()
             raise ValueError
