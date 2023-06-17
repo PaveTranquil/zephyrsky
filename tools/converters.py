@@ -5,7 +5,7 @@ from pymorphy2.shapes import restore_capitalization
 from loader import morph
 
 
-def degress_to_side(deg: float) -> str:
+def degrees_to_side(deg: float) -> str:
     if 338 <= deg <= 360 or 0 <= deg <= 22:
         return 'северный'
     elif 22 <= deg <= 67:

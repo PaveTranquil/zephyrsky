@@ -63,7 +63,7 @@ class Database:
         :type key: str
         :return: Значение указанного ключа состояния пользователя.
         """
-        return (await self.get_user(tg_id)).state[key]
+        return (await self.get_user(tg_id)).state.get(key)
 
     async def get_users(self) -> list[User]:
         """

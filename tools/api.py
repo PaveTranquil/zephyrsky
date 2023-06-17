@@ -1,7 +1,7 @@
 from aiohttp import ClientSession
 
 from loader import get
-from tools.converters import degress_to_side
+from tools.converters import degrees_to_side
 
 
 async def get_weather(geo: list[float]) -> list:
@@ -13,7 +13,7 @@ async def get_weather(geo: list[float]) -> list:
                 if r_dict['cod'] == 200:
                     return [r_dict['weather'][0]['id'], r_dict['weather'][0]['description'], r_dict['main']['temp'],
                             r_dict['main']['feels_like'], round(r_dict['main']['pressure'] * 0.750064, 2),
-                            r_dict['main']['humidity'], degress_to_side(r_dict['wind']['deg']), r_dict['wind']['speed'],
+                            r_dict['main']['humidity'], degrees_to_side(r_dict['wind']['deg']), r_dict['wind']['speed'],
                             r_dict['clouds']['all']]
                 raise ValueError
             raise ConnectionError

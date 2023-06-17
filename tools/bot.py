@@ -76,7 +76,7 @@ async def get_greeting(uid: int) -> str:
 
     user = await db.get_user(uid)
     if (tz_shift := user.state.get('tz_shift')) is None:
-        return choice(['Привет', 'Приветик', 'Приветствую', 'Хеллоу', 'Хай', 'Йоу', 'Салют'])
+        return choice(['Привет', 'Приветик', 'Приветствую', 'Хэллоу', 'Хай', 'Йоу', 'Салют'])
     local_time, city = (datetime.now() + timedelta(hours=tz_shift)).time(), user.state.get('city')
 
     if 5 <= local_time.hour <= 11:
@@ -90,7 +90,7 @@ async def get_greeting(uid: int) -> str:
                        'Добрейший вечер', 'Добрейшего вечера', 'Добрейший вечерок', 'Добрейшего вечерка'])
     else:
         greet = choice(['Доброй ночи', 'Спокойная ночь', 'Привет глубокой ночью', 'Спокойной ночи'])
-    return ' '.join([greet, 'в ' + inflect_city(city, {'loct'})])
+    return f"{greet} в {inflect_city(city, {'loct'})}"
 
 
 async def send_notifies():
