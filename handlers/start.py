@@ -25,23 +25,23 @@ async def start(resp: CallbackQuery | Message | CallbackData, state: FSMContext)
     msg = resp if isinstance(resp, Message) else resp.message
     uid = msg.chat.id
 
-    with suppress(TelegramBadRequest):
-        await msg.delete()
-
     if not await db.get_user(uid):
         await db.create_user(uid)
         text = START.format((await get_greeting(uid))[0],
                             f'! Я Зефирски 🖖🏼 А ты, кажется, {msg.chat.first_name}? Приятно познакомиться! 🤝')
     else:
         text = START.format((await get_greeting(uid))[0], f', {msg.chat.first_name}! 🖖🏼')
+
+    with suppress(TelegramBadRequest):
+        await msg.delete()
     await msg.answer(text, reply_markup=start_board)
 
 
 @router.callback_query(F.data.in_({'settings', 'back_settings'}), StateFilter('*'))
 async def settings(call: CallbackQuery | CallbackData, state: FSMContext):
     logging.debug('settings (call: %s, state: %s)', call, state)
-    await call.message.edit_text(SETTINGS, reply_markup=settings_board)
     await db.set_state(call.message.chat.id, 'from', 'settings')
+    await call.message.edit_text(SETTINGS, reply_markup=settings_board)
 
 
 @router.callback_query(F.data == 'back_settings', StateFilter(Dialog.get_geo))

@@ -109,8 +109,8 @@ async def send_notifies():
     now = datetime.now().time()
     for user in users:
         for nt in user.notify_time:
-            if (nt.hour, nt.minute) == (now.hour, now.minute):  # TODO: отправка с учётом часового пояса
-                weather = await get_weather(user.geo)  # TODO: учесть, что пользователь мог ещё не записать геолокацию
+            if user.geo and (nt.hour, nt.minute) == (now.hour + user.state.get('tz_shift'), now.minute):
+                weather = await get_weather(user.geo)
                 weather[0] = weather_id_to_icon(weather[0])
                 weather[6] = weather[6].capitalize()
                 text = FORECAST.format(inflect_city(user.state['city'], {'loct'}), *weather)

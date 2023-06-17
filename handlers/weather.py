@@ -19,11 +19,11 @@ router = Router(name='weather -> router')
 async def forecast(call: CallbackQuery, state: FSMContext):
     logging.debug('forecast (call: %s, state: %s)', call, state)
 
-    if not (await db.get_user(call.message.chat.id)).geo:
+    user = await db.get_user(call.message.chat.id)
+    if not user.geo:
         await db.set_state(call.message.chat.id, 'from', 'forecast')
         return await send_location(CallbackData('send_location', call.message), state)
 
-    user = await db.get_user(call.message.chat.id)
     weather = await get_weather(user.geo)
     weather[0] = weather_id_to_icon(weather[0])
     weather[6] = weather[6].capitalize()
