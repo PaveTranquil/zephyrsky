@@ -30,10 +30,10 @@ async def start(resp: CallbackQuery | Message | CallbackData, state: FSMContext)
 
     if not await db.get_user(uid):
         await db.create_user(uid)
-        text = START.format(await get_greeting(uid),
+        text = START.format((await get_greeting(uid))[0],
                             f'! Я Зефирски 🖖🏼 А ты, кажется, {msg.chat.first_name}? Приятно познакомиться! 🤝')
     else:
-        text = START.format(await get_greeting(uid), f', {msg.chat.first_name}! 🖖🏼')
+        text = START.format((await get_greeting(uid))[0], f', {msg.chat.first_name}! 🖖🏼')
     await msg.answer(text, reply_markup=start_board)
 
 
@@ -65,3 +65,9 @@ async def delete_data(call: CallbackQuery, state: FSMContext):
     logging.debug('delete_data (call: %s, state: %s)', call, state)
     await db.delete_user(call.message.chat.id)
     await call.message.edit_text(DATA_DELETED, reply_markup=Board([[back_btn(text='В главное меню 🏠')]]).as_markup())
+
+
+@router.callback_query(F.data == 'ok', StateFilter('*'))
+async def ok_button(call: CallbackQuery, state: FSMContext):
+    logging.debug('ok_button (call: %s, state: %s)', call, state)
+    await call.message.delete()

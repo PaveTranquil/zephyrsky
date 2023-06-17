@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder as Board
 
 from entities import FORECAST, CallbackData, back_btn
-from handlers.start import send_location
+from handlers.location import send_location
 from loader import db
 from tools.api import get_weather
 from tools.converters import inflect_city, weather_id_to_icon
