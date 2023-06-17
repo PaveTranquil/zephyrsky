@@ -1,1 +1,1 @@
-from . import start, weather
+from . import location, notify, start, weather
