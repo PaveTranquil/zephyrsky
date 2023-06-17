@@ -5,6 +5,19 @@ from tools.converters import degrees_to_side
 
 
 async def get_weather(geo: list[float]) -> list:
+    """
+    Получает информацию о текущей погоде по координатам, используя OpenWeatherMap API.
+
+    :param geo: Список из двух чисел с плавающей точкой, представляющих долготу и широту местоположения.
+    :type geo: list[float]
+
+    :return: список из цифр, представляющих погоду.
+    :rtype: list
+
+    :raises ValueError: Если координаты недействителен или на сервере внутренняя ошибка.
+    :raises ConnectionError: Если возникает проблема с подключением к API OpenWeatherMap.
+    """
+
     async with ClientSession() as session:
         params = {'lon': geo[0], 'lat': geo[1], 'units': 'metric', 'lang': 'ru', 'appid': get('APIKEY_WEATHER')}
         async with session.get('https://api.openweathermap.org/data/2.5/weather', params=params) as resp:
@@ -89,7 +102,7 @@ async def get_tzshift(geo: list[float]) -> int:
     :return: Целое число, представляющее сдвиг часового пояса в часах.
     :rtype: int
 
-    :raises ValueError: Если координаты недействителен или на сервере внутренняя ошибка.
+    :raises ValueError: Если координаты недействителены или на сервере внутренняя ошибка.
     :raises ConnectionError: Если возникает проблема с подключением к API TimeZoneDB.
     """
 

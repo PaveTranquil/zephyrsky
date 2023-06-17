@@ -33,11 +33,28 @@ class AdminFilter(BaseFilter):
 
 
 async def set_state(ctx: FSMContext, state: State):
+    """
+    Устанавливает состояние пользователя в хранилище контекста FSMContext и обновляет состояние в базе данных для
+    синхронизации.
+
+    :param ctx: Объект FSMContext.
+    :type ctx: FSMContext
+    :param state: Устанавливаемое состояние.
+    :type state: State
+    """
+
     await ctx.set_state(state)
     await db.set_state(ctx.key.chat_id, 'aiogram_state', str(state).split("'")[1])
 
 
 async def delete_state(ctx: FSMContext):
+    """
+    Очищает состояние пользователя в хранилище контекста FSMContext и все временные состояния из базы данных.
+
+    :param ctx: Объект FSMContext, состояния которого необходимо очистить.
+    :type ctx: FSMContext
+    """
+
     await ctx.clear()
     for key in ['aiogram_state', 'main_msg_id', 'from', 'set_h', 'set_m']:
         try:
@@ -47,6 +64,11 @@ async def delete_state(ctx: FSMContext):
 
 
 async def restore_states():
+    """
+    Восстанавливает состояние всех пользователей, получая их состояния из базы данных и устанавливая их в хранилище.
+    Полезно при неожиданном падении чат-бота — после перезапуска все состояния будут сохранены.
+    """
+
     users = await db.get_users()
     for user in users:
         if state := user.state.get('aiogram_state'):
