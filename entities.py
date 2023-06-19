@@ -5,8 +5,8 @@ from aiogram.types import InlineKeyboardButton as Button, KeyboardButton as KBut
 from aiogram.utils.keyboard import InlineKeyboardBuilder as Board, ReplyKeyboardBuilder as KBoard
 
 start_board = Board([
-    [Button(text='Прогноз погоды', callback_data='weather forecast')],
-    [Button(text='Настройки', callback_data='settings')]
+    [Button(text='Погода ⛅', callback_data='weather forecast')],
+    [Button(text='Настройки ⚙️', callback_data='settings')]
 ]).as_markup()
 back_btn = lambda data='', text='': Button(text='🔙 Назад' if not text else text, callback_data=f'back_{data}')
 
@@ -21,34 +21,36 @@ location_board = KBoard([
     [KButton(text='🔙 Назад')]
 ]).as_markup(one_time_keyboard=True, resize_keyboard=True)
 
-time_board = lambda h=None, m=None: lambda data='', text='': Board(
-    [[Button(text='Часы: ↘️' if h is None else f'Часы: {h:02} ↘️', callback_data='show_h')],
-     [Button(text='Минуты: ↘️' if m is None else f'Минуты: {m:02} ↘️', callback_data='show_m')],
-     [back_btn(data, text)]
-     + ([] if h is None or m is None else [Button(text='Создать 🔔', callback_data=f'create_notify {h}:{m}')])]
-).as_markup()
-hour_board = lambda h=None, m=None: lambda data='', text='': Board(
-    [[Button(text='Часы: ↖️' if h is None else f'Часы: {h:02} ↖️', callback_data='hide_h')]]
-    + [[Button(text=f'✅ {n:02}' if h == n else f'{n:02}', callback_data=f'set h {n}') for n in range(i, i + 6)]
-       for i in range(0, 24, 6)]
-    + [[Button(text='Минуты: ↘️' if m is None else f'Минуты: {m:02} ↘️', callback_data='show_m')],
-       [back_btn(data, text)]
-       + ([] if h is None or m is None else [Button(text='Создать 🔔', callback_data=f'create_notify {h}:{m}')])]
-).as_markup()
-minute_board = lambda h=None, m=None: lambda data='', text='': Board(
-    [[Button(text='Часы: ↘️' if h is None else f'Часы: {h:02} ↘️', callback_data='show_h')]]
-    + [[Button(text='Минуты: ↖️' if m is None else f'Минуты: {m:02} ↖️', callback_data='hide_m')]]
-    + [[Button(text=f'✅ {n:02}' if m == n else f'{n:02}', callback_data=f'set m {n}') for n in range(i, i + 30, 5)]
-       for i in range(0, 60, 30)]
-    + [[back_btn(data, text)]
-       + ([] if h is None or m is None else [Button(text='Создать 🔔', callback_data=f'create_notify {h}:{m}')])]
-).as_markup()
+time_board = lambda h=None, m=None: lambda data='', text='': (
+    Board().row(Button(text='Часы: ↘️' if h is None else f'Часы: {h:02} ↘️', callback_data='show_h'))
+    .row(Button(text='Минуты: ↘️' if m is None else f'Минуты: {m:02} ↘️', callback_data='show_m'))
+    .row(*([back_btn(data, text)]
+         + ([] if h is None or m is None else [Button(text='Создать 🔔', callback_data=f'create_notify {h}:{m}')])))
+    .as_markup()
+)
+hour_board = lambda h=None, m=None: lambda data='', text='': (
+    Board().row(Button(text='Часы: ↖️' if h is None else f'Часы: {h:02} ↖️', callback_data='hide_h'))
+    .row(*[Button(text=f'✅ {n:02}' if h == n else f'{n:02}', callback_data=f'set h {n}') for n in range(24)], width=6)
+    .row(Button(text='Минуты: ↘️' if m is None else f'Минуты: {m:02} ↘️', callback_data='show_m'))
+    .row(*([back_btn(data, text)]
+           + ([] if h is None or m is None else [Button(text='Создать 🔔', callback_data=f'create_notify {h}:{m}')])))
+    .as_markup()
+)
+minute_board = lambda h=None, m=None: lambda data='', text='': (
+    Board().row(Button(text='Часы: ↘️' if h is None else f'Часы: {h:02} ↘️', callback_data='show_h'))
+    .row(Button(text='Минуты: ↖️' if m is None else f'Минуты: {m:02} ↖️', callback_data='hide_m'))
+    .row(*[Button(text=f'✅ {n:02}' if m == n else f'{n:02}',
+                  callback_data=f'set m {n}') for n in range(0, 60, 5)], width=6)
+    .row(*([back_btn(data, text)]
+           + ([] if h is None or m is None else [Button(text='Создать 🔔', callback_data=f'create_notify {h}:{m}')])))
+    .as_markup()
+)
 
 
 START = ('{}{}\n\nС помощью ветров знаний и сил солнца, неба и дождя я предсказываю прогноз погоды на каждый день! '
-         'Нажми на кнопку «Прогноз погоды», чтобы узнать прогноз погоды на сегодня, на завтра и даже на целую неделю '
-         'вперёд. ⛅\n\nТы можешь настроить меня в «Настройках» и указать своё местоположение или время, когда ты '
-         'хочешь получать уведомления. 🔔')
+         'Нажми на кнопку «Погода», чтобы узнать погоду прямо сейчас и прогноз погоды на сегодня, на завтра или даже '
+         'на целых 5 дней вперёд. ⛅\n\nТы можешь настроить меня в «Настройках» и указать своё местоположение или время'
+         ', когда ты хочешь получать уведомления. 🔔')
 SETTINGS = ('Здесь ты можешь обновить своё местоположение или настроить ежедневные уведомления о погоде. ⚙️\n\nЯ за '
             'конфиденциальность, поэтому по желанию ты можешь удалить все данные о себе и заставить меня забыть тебя, '
             'нажав на кнопку «Удалить все данные». 😉')
@@ -73,8 +75,10 @@ NOTIFY_ERROR = ('Что-то мне не разобрать, что ты нап�
 NOTIFY_EXISTS = 'Уведомление с таким временем уже есть. 🤷🏻‍♂️\nВыбери другое время ;)'
 NOTIFY_SUCCESS = 'Уведомление успешно создано!  🥳'
 
-FORECAST = ('{1} Сегодня в {0} {2}.\n🌡️ На улице {3}°C (ощущается как {4}°C).\n🫠 Давление: {5} мм рт.ст.\n💦 Влажность: '
-            '{6}%.\n🍃 {7} ветер скоростью {8} м/c.\n☁️ На небе облачность в {9}%.')
+FORECAST = ('{icon} {adverb} в {city} {verb}{desc}.\n🌡️ На улице {temp}°C ({feels_verb} как {feels_like}°C).\n🫠 '
+            'Давление: {pressure} мм рт.ст.\n💦 Влажность: {humidity}%.\n🍃 {wind_side} ветер скоростью {wind_speed} '
+            'м/c.\n☁️ На небе облачность в {clouds}%.')
+SUN_DESC = '🌅 Восход сегодня {verb_sr} в {sunrise}.\n🌇 Закат {verb_ss} в {sunset}.'
 
 SOON = 'В разработке — ждите очень скоро! 🔜'
 

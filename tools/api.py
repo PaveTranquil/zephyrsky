@@ -1,7 +1,22 @@
 from aiohttp import ClientSession
+from datetime import datetime
 
 from loader import get
-from tools.converters import degrees_to_side
+from tools.converters import degrees_to_side, weather_id_to_icon
+
+
+def extract_weather_data(data: dict) -> dict:
+    return {
+        'icon': weather_id_to_icon(data['weather'][0]['id']),
+        'desc': data['weather'][0]['description'],
+        'temp': data['main']['temp'],
+        'feels_like': data['main']['feels_like'],
+        'pressure': round(data['main']['pressure'] * 0.750064, 2),
+        'humidity': data['main']['humidity'],
+        'wind_side': degrees_to_side(data['wind']['deg']).capitalize(),
+        'wind_speed': data['wind']['speed'],
+        'clouds': data['clouds']['all']
+    }
 
 
 async def get_weather(geo: list[float]) -> list:
@@ -24,10 +39,24 @@ async def get_weather(geo: list[float]) -> list:
             r_dict = await resp.json()
             if resp.status == 200:
                 if r_dict['cod'] == 200:
-                    return [r_dict['weather'][0]['id'], r_dict['weather'][0]['description'], r_dict['main']['temp'],
-                            r_dict['main']['feels_like'], round(r_dict['main']['pressure'] * 0.750064, 2),
-                            r_dict['main']['humidity'], degrees_to_side(r_dict['wind']['deg']), r_dict['wind']['speed'],
-                            r_dict['clouds']['all']]
+                    return extract_weather_data(r_dict), {
+                        'sunrise': datetime.fromtimestamp(r_dict['sys']['sunrise']).time(),
+                        'sunset': datetime.fromtimestamp(r_dict['sys']['sunset']).time()
+                    }
+                raise ValueError
+            raise ConnectionError
+
+
+async def get_weather_5_days(geo: list[float], cnt: int = 40) -> list:
+    async with ClientSession() as session:
+        params = {'lon': geo[0], 'lat': geo[1], 'cnt': cnt, 'units': 'metric',
+                  'lang': 'ru', 'appid': get('APIKEY_WEATHER')}
+        async with session.get('https://api.openweathermap.org/data/2.5/forecast', params=params) as resp:
+            r_dict = await resp.json()
+            if resp.status == 200:
+                if r_dict['cod'] == '200':
+                    return [(datetime.fromtimestamp(weather['dt']), extract_weather_data(weather))
+                            for weather in r_dict['list']]
                 raise ValueError
             raise ConnectionError
 
@@ -102,7 +131,7 @@ async def get_tzshift(geo: list[float]) -> int:
     :return: Целое число, представляющее сдвиг часового пояса в часах.
     :rtype: int
 
-    :raises ValueError: Если координаты недействителены или на сервере внутренняя ошибка.
+    :raises ValueError: Если координаты недействительны или на сервере внутренняя ошибка.
     :raises ConnectionError: Если возникает проблема с подключением к API TimeZoneDB.
     """
 

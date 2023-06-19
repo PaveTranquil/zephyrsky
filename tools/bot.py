@@ -12,8 +12,8 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder as Board
 
 from loader import ADMINS, bot, db, storage
 from tools.api import get_weather
-from tools.converters import inflect_city, weather_id_to_icon
-from entities import FORECAST
+from tools.converters import inflect_city
+from entities import FORECAST, SUN_DESC
 
 
 class AdminFilter(BaseFilter):
@@ -107,7 +107,7 @@ async def get_greeting(uid: int, with_city: bool = True) -> str:
     if 5 <= local_time.hour <= 11:
         greet = choice(['Доброе утро', 'Доброго утра', 'Доброе утречко', 'Доброго утречка', 'Утречко', 'Утро доброе',
                        'Добрейшее утро', 'Добрейшего утра', 'Добрейшее утречко', 'Добрейшего утречка'])
-        icon = '🌅'
+        icon = '🌇'
     elif 12 <= local_time.hour <= 16:
         greet = choice(['Добрый день', 'Доброго дня', 'Добрый денёк', 'Доброго денька', 'День добрый',
                        'Добрейший день', 'Добрейшего дня', 'Добрейший денёк', 'Добрейшего денька'])
@@ -132,10 +132,12 @@ async def send_notifies():
     for user in users:
         for nt in user.notify_time:
             if user.geo and (nt.hour, nt.minute) == (now.hour + user.state.get('tz_shift'), now.minute):
-                weather = await get_weather(user.geo)
-                weather[0] = weather_id_to_icon(weather[0])
-                weather[6] = weather[6].capitalize()
-                text = FORECAST.format(inflect_city(user.state['city'], {'loct'}), *weather)
+                weather, sun_status = await get_weather(user.geo)
+                context = {'adverb': 'Сегодня', 'verb': 'будет ', 'feels_verb': 'ощущается'}
+                text = FORECAST.format(**({'city': inflect_city(user.state['city'], {'loct'})} | weather | context))
+                sun_status_verbs = {'verb_sr': 'был' if datetime.now().time() > sun_status['sunrise'] else 'будет',
+                                    'verb_ss': 'был' if datetime.now().time() > sun_status['sunset'] else 'будет'}
+                text += '\n\n' + SUN_DESC.format(**(sun_status | sun_status_verbs))
                 board = Board([[Button(text='Спасибо 🫂', callback_data='ok')]]).as_markup()
                 await bot.send_message(user.tg_id, f'{"! ".join(await get_greeting(user.tg_id, False))}\n\n{text}',
                                        reply_markup=board)

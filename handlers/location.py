@@ -3,15 +3,15 @@ import logging
 from aiogram import F, Router
 from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, InlineKeyboardButton as Button, Message, ReplyKeyboardRemove
-from aiogram.utils.keyboard import InlineKeyboardBuilder as Board
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
-from entities import (CURR_LOCATION, CURR_NOTIFY, FORECAST, LOCATION, LOCATION_ERROR, LOCATION_SET,
-                      NO_LOCATION_FORECAST, SETTINGS, CallbackData, Dialog, back_btn, location_board, settings_board)
+from entities import (CURR_LOCATION, LOCATION, LOCATION_ERROR, NO_LOCATION_FORECAST, NO_LOCATION_NOTIFY, CallbackData,
+                      Dialog, location_board)
+from handlers import notify, start, weather
 from loader import bot, db
-from tools.api import geocoding, get_tzshift, get_weather, reverse_geocoding
+from tools.api import geocoding, get_tzshift, reverse_geocoding
 from tools.bot import delete_state, set_state
-from tools.converters import inflect_city, weather_id_to_icon
+from tools.converters import inflect_city
 
 router = Router(name='location -> router')
 
@@ -28,7 +28,7 @@ async def send_location(call: CallbackQuery | CallbackData, state: FSMContext):
     elif await db.get_state(call.message.chat.id, 'from') == 'forecast':
         text = f'{NO_LOCATION_FORECAST}\n\n{LOCATION}'
     elif await db.get_state(call.message.chat.id, 'from') == 'notify':
-        text = LOCATION
+        text = NO_LOCATION_NOTIFY
     await call.message.delete()
     main_msg = await call.message.answer(text, reply_markup=location_board)
     await db.set_state(main_msg.chat.id, 'main_msg_id', main_msg.message_id)
@@ -49,20 +49,11 @@ async def get_location_as_object(msg: Message, state: FSMContext):
     await service_msg.delete()
     await bot.delete_message(msg.chat.id, await db.get_state(msg.chat.id, 'main_msg_id'))
     if await db.get_state(msg.chat.id, 'from') == 'settings':
-        await msg.answer(f"{LOCATION_SET.format(inflect_city(city, {'gent'}))}\n\n{SETTINGS}",
-                         reply_markup=settings_board)
+        await start.settings(CallbackData('settings', msg), state)
     elif await db.get_state(msg.chat.id, 'from') == 'forecast':
-        weather = await get_weather(geo)
-        weather[0] = weather_id_to_icon(weather[0])
-        weather[6] = weather[6].capitalize()
-        text = FORECAST.format(inflect_city(city, {'loct'}), *weather)
-        await msg.answer(f"{LOCATION_SET.format(inflect_city(city, {'gent'}))}\n\n{text}",
-                         reply_markup=Board([[back_btn()]]).as_markup())
+        await weather.forecast(CallbackData('weather forecast', msg), state)
     elif await db.get_state(msg.chat.id, 'from') == 'notify':
-        board = Board([[Button(text='➕ Добавить новое уведомление', callback_data='add_notify')],
-                       [back_btn('settings')]])
-        await msg.answer(f"{LOCATION_SET.format(inflect_city(city, {'gent'}))}\n\n{CURR_NOTIFY[1]}",
-                         reply_markup=board.as_markup())
+        await notify.notify_settings(CallbackData('notify_settings', msg), state)
     await delete_state(state)
 
 
@@ -84,18 +75,9 @@ async def get_location_as_text(msg: Message, state: FSMContext):
     await service_msg.delete()
     await bot.delete_message(msg.chat.id, await db.get_state(msg.chat.id, 'main_msg_id'))
     if await db.get_state(msg.chat.id, 'from') == 'settings':
-        await msg.answer(f"{LOCATION_SET.format(inflect_city(city, {'gent'}))}\n\n{SETTINGS}",
-                         reply_markup=settings_board)
+        await start.settings(CallbackData('settings', msg), state)
     elif await db.get_state(msg.chat.id, 'from') == 'forecast':
-        weather = await get_weather(geo)
-        weather[0] = weather_id_to_icon(weather[0])
-        weather[6] = weather[6].capitalize()
-        text = FORECAST.format(inflect_city(city, {'loct'}), *weather)
-        await msg.answer(f"{LOCATION_SET.format(inflect_city(city, {'gent'}))}\n\n{text}",
-                         reply_markup=Board([[back_btn()]]).as_markup())
+        await weather.forecast(CallbackData('weather forecast', msg), state)
     elif await db.get_state(msg.chat.id, 'from') == 'notify':
-        board = Board([[Button(text='➕ Добавить новое уведомление', callback_data='add_notify')],
-                       [back_btn('settings')]])
-        await msg.answer(f"{LOCATION_SET.format(inflect_city(city, {'gent'}))}\n\n{CURR_NOTIFY[1]}",
-                         reply_markup=board.as_markup())
+        await notify.notify_settings(CallbackData('notify_settings', msg), state)
     await delete_state(state)

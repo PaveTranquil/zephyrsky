@@ -66,8 +66,10 @@ def weather_id_to_icon(id_: int) -> str:
             return '🌤️'
         case 2:
             return '⛅'
-        case 3 | 4:
+        case 3:
             return '🌥️'
+        case 4:
+            return '☁️'
 
 
 def inflect_city(text: str, required_grammemes: Iterable[str]) -> str:
